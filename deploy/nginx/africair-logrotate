@@ -1,0 +1,12 @@
+/var/log/nginx/africair.access.json /var/log/nginx/africair.error.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    sharedscripts
+    postrotate
+        nginx -s reopen
+    endscript
+}
