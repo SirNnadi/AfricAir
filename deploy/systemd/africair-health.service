@@ -1,0 +1,7 @@
+[Unit]
+Description=AfricAir health check
+After=network.target nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/africair/scripts/healthcheck.sh
