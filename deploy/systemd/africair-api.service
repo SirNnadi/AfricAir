@@ -1,0 +1,76 @@
+[Unit]
+Description=AfricAir API
+Documentation=https://github.com/SirNnadi/AfricAir
+# Start after the network is up and PostgreSQL is ready (if local).
+# If PostgreSQL is remote, remove the postgresql.service dependency.
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=africair
+WorkingDirectory=/opt/africair/api/current
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+# Node is the runtime; the compiled JS is always at this fixed path because
+# deploy.sh atomically switches /opt/africair/api/current before restarting.
+ExecStart=/usr/bin/node dist/index.js
+
+# ── Non-secret settings ───────────────────────────────────────────────────────
+# Owned root:africair, mode 0640 — africair can read, others cannot.
+# Change values here and run: systemctl restart africair-api
+EnvironmentFile=/etc/africair/api.env
+
+# ── Secrets via LoadCredential ────────────────────────────────────────────────
+# systemd copies each source file into a private, in-memory directory at
+# service start. The path to that directory is exposed as %d inside this unit.
+# The africair user can read %d/<name> but CANNOT reach /etc/africair/secrets/
+# directly (proved below with: sudo -u africair cat /etc/africair/secrets/admin_token).
+#
+# Because LoadCredential reads the file at start time, rotating a secret
+# requires a service restart to take effect — unlike NAME_FILE paths that the
+# app re-reads on its own timer. This is the expected behaviour for systemd
+# credentials; the /#/status page will show source "file" for all three.
+LoadCredential=admin_token:/etc/africair/secrets/admin_token
+LoadCredential=promo_codes:/etc/africair/secrets/promo_codes
+LoadCredential=database_url:/etc/africair/secrets/database_url
+
+# Point the app at the credential files systemd placed in %d/.
+# The app's secretReader() checks NAME_FILE first, so these take priority
+# over any NAME= value that might exist in api.env.
+Environment=ADMIN_TOKEN_FILE=%d/admin_token
+Environment=PROMO_CODES_FILE=%d/promo_codes
+Environment=DATABASE_URL_FILE=%d/database_url
+
+# ── Restart policy ────────────────────────────────────────────────────────────
+# Restart on non-zero exit or signal, but not on clean exit (code 0).
+Restart=on-failure
+RestartSec=5s
+
+# ── Graceful shutdown ─────────────────────────────────────────────────────────
+# The app handles SIGTERM: it marks readiness as failing, waits
+# SHUTDOWN_DELAY_MS (default 5000 ms) to drain in-flight requests, then exits.
+# TimeoutStopSec must be longer than SHUTDOWN_DELAY_MS so systemd does not
+# send SIGKILL before the drain completes. 15 s gives 10 s of headroom.
+TimeoutStopSec=15s
+
+# ── Hardening ─────────────────────────────────────────────────────────────────
+# Prevent the process from gaining new privileges via setuid/capabilities.
+NoNewPrivileges=yes
+
+# Mount /usr, /boot, /etc read-only. The API only writes to the database
+# (over the network) and to stdout/stderr (journald). It never writes to disk.
+ProtectSystem=strict
+
+# Hide /home, /root and /run/user from the service.
+ProtectHome=yes
+
+# Give the process its own private /tmp, isolated from other services.
+PrivateTmp=yes
+
+# Cap RSS at 256 MiB. The Node process is lightweight; this prevents a memory
+# leak from consuming the whole server before systemd kills and restarts it.
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
