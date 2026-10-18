@@ -76,9 +76,10 @@ echo "  frontend extracted to $RELEASE_DIR"
 # the africair-api.service ExecStart path never changes: it always points at
 # /opt/africair/api/current/server/dist/index.js
 mkdir -p "$API_RELEASE_DIR"
-cp -r "${RELEASE_DIR}/server/dist"       "${API_RELEASE_DIR}/"
-cp -r "${RELEASE_DIR}/server/migrations" "${API_RELEASE_DIR}/"
+cp -r "${RELEASE_DIR}/server/dist"         "${API_RELEASE_DIR}/"
+cp -r "${RELEASE_DIR}/server/migrations"   "${API_RELEASE_DIR}/"
 cp    "${RELEASE_DIR}/server/package.json" "${API_RELEASE_DIR}/"
+cp    "${RELEASE_DIR}/server/pnpm-lock.yaml" "${API_RELEASE_DIR}/"
 
 # Install production-only Node dependencies inside the API release directory.
 # --prod omits devDependencies; --frozen-lockfile ensures the exact versions
