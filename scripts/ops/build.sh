@@ -77,11 +77,6 @@ echo "  version.json: $(cat dist/version.json)"
 echo "==> [5/5] Packaging artifact"
 ARTIFACT_NAME="africair-${SHORT_SHA}.tar.gz"
 
-# The root pnpm-lock.yaml covers the whole workspace. Copy it into server/ so
-# pnpm install --frozen-lockfile works inside the API release directory on the
-# server, where only the server/ subtree is present.
-cp pnpm-lock.yaml server/pnpm-lock.yaml
-
 # Bundle: frontend dist/ + API server/dist/ + server/migrations/
 tar -czf "${ARTIFACT_DIR}/${ARTIFACT_NAME}" \
   dist/ \

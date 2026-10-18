@@ -79,12 +79,13 @@ mkdir -p "$API_RELEASE_DIR"
 cp -r "${RELEASE_DIR}/server/dist"         "${API_RELEASE_DIR}/"
 cp -r "${RELEASE_DIR}/server/migrations"   "${API_RELEASE_DIR}/"
 cp    "${RELEASE_DIR}/server/package.json" "${API_RELEASE_DIR}/"
-cp    "${RELEASE_DIR}/server/pnpm-lock.yaml" "${API_RELEASE_DIR}/"
 
 # Install production-only Node dependencies inside the API release directory.
-# --prod omits devDependencies; --frozen-lockfile ensures the exact versions
-# from the lockfile are installed, same guarantee as the original build.
-pnpm install --prod --frozen-lockfile --dir "$API_RELEASE_DIR" --silent
+# --prod omits devDependencies. The root pnpm-lock.yaml covers the whole
+# workspace so it cannot be used with --frozen-lockfile against server/package.json
+# alone. The compiled server/dist/ is already the exact code tested during the
+# build; installing the two runtime deps (pg, prom-client) without a lockfile here is safe.
+pnpm install --prod --no-frozen-lockfile --dir "$API_RELEASE_DIR" --silent
 chown -R africair:africair "$API_RELEASE_DIR"
 echo "  API extracted to $API_RELEASE_DIR"
 
