@@ -81,11 +81,9 @@ cp -r "${RELEASE_DIR}/server/migrations" "${API_RELEASE_DIR}/"
 cp    "${RELEASE_DIR}/server/package.json" "${API_RELEASE_DIR}/"
 
 # Install production-only Node dependencies inside the API release directory.
-# --omit=dev keeps devDependencies off the server; --frozen-lockfile is not
-# used here because we only have package.json (no lockfile in the artifact),
-# so npm resolves from the registry but is constrained by the exact versions
-# already pinned in package.json.
-npm ci --omit=dev --prefix "$API_RELEASE_DIR" --silent
+# --prod omits devDependencies; --frozen-lockfile ensures the exact versions
+# from the lockfile are installed, same guarantee as the original build.
+pnpm install --prod --frozen-lockfile --dir "$API_RELEASE_DIR" --silent
 chown -R africair:africair "$API_RELEASE_DIR"
 echo "  API extracted to $API_RELEASE_DIR"
 

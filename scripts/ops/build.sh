@@ -82,7 +82,8 @@ tar -czf "${ARTIFACT_DIR}/${ARTIFACT_NAME}" \
   dist/ \
   server/dist/ \
   server/migrations/ \
-  server/package.json
+  server/package.json \
+  server/pnpm-lock.yaml
 
 # Checksum
 cd "$ARTIFACT_DIR"
