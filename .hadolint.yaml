@@ -1,0 +1,9 @@
+failure-threshold: warning
+ignore:
+  # DL3059: consecutive RUN in Dockerfile.web build stage — kept separate
+  # intentionally: `pnpm build` and the version.json write are distinct steps
+  # with different cache invalidation characteristics.
+  - DL3059
+  # DL3066: USER node — the node:22-alpine base image defines the `node` user
+  # (uid 1000) in /etc/passwd, so it is always resolvable inside the container.
+  - DL3066

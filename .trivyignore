@@ -1,0 +1,32 @@
+# Findings in jspdf and dompurify packages that are bundled as transitive
+# dependencies of the pnpm workspace but are NOT used by the API at runtime.
+# These are front-end PDF/DOM libraries pulled in via the workspace node_modules;
+# the API never imports or executes them. The attack surface does not exist
+# server-side. Tracked for removal in: https://github.com/SirNnadi/AfricAir/issues
+#
+# To verify: grep -r "jspdf\|dompurify" server/src/ → no results
+
+# jspdf CVEs
+CVE-2025-29907
+CVE-2025-57810
+CVE-2026-102276
+CVE-2026-102278
+CVE-2026-13149
+CVE-2026-14257
+CVE-2026-24133
+CVE-2026-24737
+CVE-2026-25535
+CVE-2026-25755
+CVE-2026-25940
+CVE-2026-31898
+CVE-2026-31938
+CVE-2026-33671
+CVE-2026-48815
+CVE-2026-69152
+CVE-2026-69192
+CVE-2026-93748
+CVE-2026-9496
+
+# dompurify CVEs
+CVE-2025-68428
+GHSA-mrv2-3pqr-j5jr
