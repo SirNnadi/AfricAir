@@ -1,0 +1,32 @@
+# Dependencies — never copy local node_modules into the image
+node_modules
+server/node_modules
+**/node_modules
+
+# Build outputs — built inside the image, not copied from host
+dist
+server/dist
+
+# Git history — not needed in the image
+.git
+.gitignore
+
+# Test artefacts
+test-results
+playwright-report
+
+# Environment files — secrets must never bake into an image
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Local build artefacts from Project 1
+africair-*.tar.gz
+africair-*.tar.gz.sha256
+
+# Editor and OS noise
+.DS_Store
+*.swp

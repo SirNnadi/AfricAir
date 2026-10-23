@@ -1,0 +1,69 @@
+server {
+    listen 8080;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Expose which environment this instance is serving — useful for debugging
+    add_header X-Environment "${APP_ENV}" always;
+
+    # ── Gzip ──────────────────────────────────────────────────────────────────
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # ── Security headers ──────────────────────────────────────────────────────
+    add_header X-Content-Type-Options   "nosniff"           always;
+    add_header X-Frame-Options          "DENY"              always;
+    add_header Referrer-Policy          "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';"
+        always;
+
+    # ── Health check (not logged) ─────────────────────────────────────────────
+    location = /healthz {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok";
+    }
+
+    # ── Hashed assets — cache forever ─────────────────────────────────────────
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # ── version.json and index.html — always revalidate ───────────────────────
+    location = /version.json {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri =404;
+    }
+
+    # ── API proxy ─────────────────────────────────────────────────────────────
+    # Use a variable for proxy_pass so nginx re-resolves the upstream on every
+    # request via Docker's embedded DNS (127.0.0.11). Without the variable,
+    # nginx resolves "api" once at startup and caches the IP — meaning new
+    # replicas added with --scale are never used and a restarted api container
+    # gets a new IP that nginx never learns about.
+    location /api/ {
+        resolver 127.0.0.11 valid=10s;
+        set $upstream "${API_UPSTREAM}";
+        proxy_pass         $upstream;
+        proxy_set_header   Host $host;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Real-IP $remote_addr;
+        add_header         X-Upstream $upstream_addr always;
+    }
+
+    # ── SPA fallback — all routes serve index.html ────────────────────────────
+    location / {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

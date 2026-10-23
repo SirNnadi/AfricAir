@@ -1,0 +1,112 @@
+name: africair
+
+secrets:
+  db_password:
+    file: ./secrets/db_password
+  database_url:
+    file: ./secrets/database_url
+  admin_token:
+    file: ./secrets/admin_token
+  promo_codes:
+    file: ./secrets/promo_codes
+
+networks:
+  internal:
+
+volumes:
+  pgdata:
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: africair
+      POSTGRES_USER: africair_app
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U africair_app -d africair"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+    secrets:
+      - database_url
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: config/staging.env
+    environment:
+      DATABASE_URL_FILE: /run/secrets/database_url
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      PROMO_CODES_FILE: /run/secrets/promo_codes
+    secrets:
+      - database_url
+      - admin_token
+      - promo_codes
+    networks:
+      - internal
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    deploy:
+      replicas: 2
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      APP_ENV: staging
+      API_UPSTREAM: http://api:4000
+    ports:
+      - "8080:8080"
+    networks:
+      - internal
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.64.0-noble
+    working_dir: /work
+    volumes:
+      - .:/work
+    command: >
+      sh -c "corepack enable &&
+             pnpm install --frozen-lockfile &&
+             BASE_URL=http://web:8080 pnpm test:e2e"
+    networks:
+      - internal
+    depends_on:
+      web:
+        condition: service_healthy
+    profiles:
+      - test

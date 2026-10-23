@@ -6,3 +6,6 @@ playwright-report/
 .env
 .env.*
 !.env.example
+secrets/
+africair-*.tar.gz
+africair-*.tar.gz.sha256
