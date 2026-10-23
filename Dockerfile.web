@@ -51,11 +51,23 @@ COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy the envsubst template. nginx-unprivileged's entrypoint runs envsubst on
 # every *.template in /etc/nginx/templates/ and writes the result to
-# /etc/nginx/conf.d/ before starting nginx.
+# NGINX_ENVSUBST_OUTPUT_DIR. We set that to /tmp/nginx (a writable tmpfs mount)
+# so the container works with --read-only. Without this, the entrypoint tries to
+# write to /etc/nginx/conf.d/ which is on the read-only root filesystem.
 COPY deploy/nginx/templates/africair.conf.template /etc/nginx/templates/
+COPY deploy/nginx/docker-entrypoint.d/10-create-nginx-tmpdir.sh /docker-entrypoint.d/
 
-# Remove the default nginx config so only our template is active
+# Replace the default nginx.conf with one that:
+#   - writes all temp files to /tmp (writable)
+#   - includes configs from /tmp/nginx/ (where envsubst writes)
+COPY deploy/nginx/nginx.conf /etc/nginx/nginx.conf
+
+# Remove the default server config — our template replaces it
 RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Tell the entrypoint to write processed templates to /tmp/nginx instead of
+# /etc/nginx/conf.d/ (which is read-only when --read-only is set)
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/tmp/nginx
 
 EXPOSE 8080
 
